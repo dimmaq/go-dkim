@@ -33,7 +33,7 @@ Joe.
 var testVerification = &Verification{
 	Domain: "example.com",
 	Identifier: "joe@football.example.com",
-	HeaderKeys: []string{"Received", "From", "To", "Subject", "Date", "Message-ID"},
+	HeaderKeys: []string{"Received:", "From:", "To:", "Subject:", "Date:", "Message-ID:"},
 	BodyLength: -1,
 }
 

@@ -59,15 +59,15 @@ var relaxedCanonicalizerHeaderTests = []struct {
 }{
 	{
 		"SubjeCT: Your Name\r\n",
-		"subject:Your Name\r\n",
+		"subject:Your Name",
 	},
 	{
 		"Subject \t:\t Your Name\t \r\n",
-		"subject:Your Name\r\n",
+		"subject:Your Name",
 	},
 	{
 		"Subject \t:\t Kimi \t \r\n No \t\r\n Na Wa\r\n",
-		"subject:Kimi No Na Wa\r\n",
+		"subject:Kimi No Na Wa",
 	},
 }
 
@@ -119,7 +119,7 @@ var relaxedCanonicalizerBodyTests = []struct {
 	},
 	{
 		"Hey\r\n \t you!\r\n",
-		"Hey\r\n \t you!\r\n",
+		"Hey\r\n you!\r\n",
 	},
 	{
 		"Hey\r\n \t \r\n \r\n",

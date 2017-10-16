@@ -187,6 +187,9 @@ func Sign(w io.Writer, r io.Reader, options *SignOptions) error {
 		if _, err := hasher.Write([]byte(kv)); err != nil {
 			return err
 		}
+		if _, err := hasher.Write([]byte(crlf)); err != nil {
+			return err
+		}
 	}
 
 	params["b"] = ""

@@ -12,13 +12,13 @@ var headerTests = []struct {
 	s string
 }{
 	{
-		h: header{"From: <mistuha@kiminonawa.moe>\r\n"},
+		h: header{"From: <mistuha@kiminonawa.moe>"},
 		s: "From: <mistuha@kiminonawa.moe>\r\n\r\n",
 	},
 	{
 		h: header{
-			"From: <mistuha@kiminonawa.moe>\r\n",
-			"Subject: Your Name\r\n",
+			"From: <mistuha@kiminonawa.moe>",
+			"Subject: Your Name",
 		},
 		s: "From: <mistuha@kiminonawa.moe>\r\n" +
 			"Subject: Your Name\r\n" +

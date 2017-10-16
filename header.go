@@ -42,6 +42,9 @@ func writeHeader(w io.Writer, h header) error {
 		if _, err := w.Write([]byte(kv)); err != nil {
 			return err
 		}
+		if _, err := w.Write([]byte(crlf)); err != nil {
+			return err
+		}
 	}
 	_, err := w.Write([]byte(crlf))
 	return err
