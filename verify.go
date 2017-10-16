@@ -1,13 +1,14 @@
 package dkim
 
 import (
-	"bytes"
 	"bufio"
+	"bytes"
 	"crypto"
 	"crypto/subtle"
 	"encoding/base64"
 	"io"
 	"io/ioutil"
+	"os"
 	"regexp"
 	"strconv"
 	"strings"
@@ -154,10 +155,10 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 	}
 	verif.Identifier = params["i"]
 
-	headerKeys := parseTagList(params["h"])
+	headerKeys := parseTagListHeaders(params["h"])
 	ok := false
 	for _, k := range headerKeys {
-		if strings.ToLower(k) == "from" {
+		if strings.ToLower(k) == "from:" {
 			ok = true
 			break
 		}
@@ -253,11 +254,16 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 		}
 	}
 
-	headerCan, bodyCan := parseCanonicalization(params["c"])
-	if _, ok := canonicalizers[headerCan]; !ok {
+	headerCanTxt, bodyCanTxt := parseCanonicalization(params["c"])
+	var headerCan, bodyCan canonicalizer
+	if can, ok := canonicalizers[headerCanTxt]; ok {
+		headerCan = can
+	} else {
 		return verif, permFailError("unsupported header canonicalization algorithm")
 	}
-	if _, ok := canonicalizers[bodyCan]; !ok {
+	if can, ok := canonicalizers[bodyCanTxt]; ok {
+		bodyCan = can
+	} else {
 		return verif, permFailError("unsupported body canonicalization algorithm")
 	}
 
@@ -289,7 +295,7 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 	if bodyLen > 0 {
 		w = &limitedWriter{W: w, N: bodyLen}
 	}
-	wc := canonicalizers[bodyCan].CanonicalizeBody(w)
+	wc := bodyCan.CanonicalizeBody(w)
 	if _, err := io.Copy(wc, r); err != nil {
 		return verif, err
 	}
@@ -302,6 +308,15 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 
 	// Compute data hash
 	hasher.Reset()
+	var mw io.Writer
+	if debugSaveCanon {
+		f, _ := os.Create(`header_canon1.txt`)
+		mw = io.MultiWriter(hasher, f)
+	} else {
+		mw = hasher //io.MultiWriter(hasher, f)
+	}
+	headerCan.CanonicalizeHeaders(headerKeys)
+	headerCan.CanonicalizeHeaders([]string(h))
 	picker := newHeaderPicker(h)
 	for _, key := range headerKeys {
 		kv := picker.Pick(key)
@@ -309,15 +324,17 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 			continue
 		}
 
-		kv = canonicalizers[headerCan].CanonicalizeHeader(kv)
-		if _, err := hasher.Write([]byte(kv)); err != nil {
+		if _, err := mw.Write([]byte(kv)); err != nil {
+			return verif, err
+		}
+		if _, err := mw.Write([]byte(crlf)); err != nil {
 			return verif, err
 		}
 	}
 	canSigField := removeSignature(sigField)
-	canSigField = canonicalizers[headerCan].CanonicalizeHeader(canSigField)
+	canSigField = headerCan.CanonicalizeHeader(canSigField)
 	canSigField = strings.TrimRight(canSigField, "\r\n")
-	if _, err := hasher.Write([]byte(canSigField)); err != nil {
+	if _, err := mw.Write([]byte(canSigField)); err != nil {
 		return verif, err
 	}
 	hashed := hasher.Sum(nil)
@@ -328,6 +345,14 @@ func verify(h header, r io.Reader, sigField, sigValue string) (*Verification, er
 	}
 
 	return verif, nil
+}
+
+func parseTagListHeaders(s string) []string {
+	tags := strings.Split(s, ":")
+	for i, t := range tags {
+		tags[i] = strings.TrimSpace(t) + `:`
+	}
+	return tags
 }
 
 func parseTagList(s string) []string {

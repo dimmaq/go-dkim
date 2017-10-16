@@ -14,7 +14,7 @@ import (
 	"time"
 )
 
-var randReader io.Reader = rand.Reader
+var randReader = rand.Reader
 
 // SignOptions is used to configure Sign. Domain, Selector and Signer are
 // mandatory.

@@ -6,6 +6,7 @@ import (
 	"crypto/x509"
 	"encoding/base64"
 	"net"
+	"strings"
 )
 
 type verifier interface {
@@ -49,12 +50,19 @@ func queryDNSTXT(domain, selector string) (*queryResult, error) {
 	}
 
 	var res *queryResult
-	for _, txt := range txts {
-		res, err = parsePublicKey(txt)
-		if err == nil {
-			return res, err
-		}
+	txt := strings.Join(txts, ``)
+	res, err = parsePublicKey(txt)
+	if err == nil {
+		return res, nil
 	}
+	/*
+		for _, txt := range txts {
+			res, err = parsePublicKey(txt)
+			if err == nil {
+				return res, err
+			}
+		}
+	*/
 	return res, err
 }
 

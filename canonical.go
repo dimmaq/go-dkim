@@ -8,6 +8,7 @@ import (
 type canonicalizer interface {
 	CanonicalizeHeader(s string) string
 	CanonicalizeBody(w io.Writer) io.WriteCloser
+	CanonicalizeHeaders(s []string)
 }
 
 var canonicalizers = map[string]canonicalizer{
@@ -19,6 +20,9 @@ type simpleCanonicalizer struct{}
 
 func (c *simpleCanonicalizer) CanonicalizeHeader(s string) string {
 	return s
+}
+
+func (c *simpleCanonicalizer) CanonicalizeHeaders(s []string) {
 }
 
 type simpleBodyCanonicalizer struct {
@@ -80,22 +84,29 @@ func (c *relaxedCanonicalizer) CanonicalizeHeader(s string) string {
 	if len(kv) > 1 {
 		v = kv[1]
 	}
-	lines := strings.Split(v, crlf)
-	lines[0] = strings.TrimLeft(lines[0], " \t")
+	if len(v) != 0 {
+		lines := strings.Split(v, crlf)
+		lines[0] = strings.TrimLeft(lines[0], " \t")
 
-	v = ""
-	for _, l := range lines {
-		if len(l) == 0 {
-			break
-		}
+		v = ""
+		for _, l := range lines {
+			if len(l) == 0 {
+				break
+			}
 
-		if l[0] == ' ' || l[0] == '\t' {
-			v += " "
+			if l[0] == ' ' || l[0] == '\t' {
+				v += " "
+			}
+			v += reduceWitespaces(strings.Trim(l, " \t"))
 		}
-		v += strings.Trim(l, " \t")
 	}
+	return k + ":" + v //+ crlf
+}
 
-	return k + ":" + v + crlf
+func (c *relaxedCanonicalizer) CanonicalizeHeaders(s []string) {
+	for i := range s {
+		s[i] = c.CanonicalizeHeader(s[i])
+	}
 }
 
 type relaxedBodyCanonicalizer struct {

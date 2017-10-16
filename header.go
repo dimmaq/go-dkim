@@ -7,6 +7,7 @@ import (
 	"net/textproto"
 	"sort"
 	"strings"
+	"unicode"
 )
 
 const crlf = "\r\n"
@@ -27,9 +28,9 @@ func readHeader(r *bufio.Reader) (header, error) {
 			break
 		} else if len(h) > 0 && (l[0] == ' ' || l[0] == '\t') {
 			// This is a continuation line
-			h[len(h)-1] += l + crlf
+			h[len(h)-1] += crlf + l
 		} else {
-			h = append(h, l+crlf)
+			h = append(h, l /*+crlf*/)
 		}
 	}
 
@@ -66,8 +67,16 @@ func parseHeaderParams(s string) (map[string]string, error) {
 			}
 			return params, errors.New("dkim: malformed header params")
 		}
+		//v := kv[1]
+		// remove spaces
+		v := strings.Map(func(r rune) rune {
+			if unicode.IsSpace(r) {
+				return -1
+			}
+			return r
+		}, kv[1])
 
-		params[strings.TrimSpace(kv[0])] = strings.TrimSpace(kv[1])
+		params[strings.TrimSpace(kv[0])] = v //strings.TrimSpace(v)
 	}
 	return params, nil
 }
@@ -111,8 +120,7 @@ func (p *headerPicker) Pick(key string) string {
 	at := p.picked[key]
 	for i := len(p.h) - 1; i >= 0; i-- {
 		kv := p.h[i]
-		k, _ := parseHeaderField(kv)
-		if k != key {
+		if strings.HasPrefix(kv, key) == false {
 			continue
 		}
 
